@@ -23,7 +23,7 @@ using namespace std;
 
 void usage()
 {
-	fprintf(stdout,"conver gatan dat to mrc stack\n");
+	fprintf(stdout,"convert gatan dat to mrc stack\n");
 	fprintf(stdout,"Usage: ./dat2mrc \n");
 	fprintf(stdout,"\t -s num\t--start \tinput start num\n");
 	fprintf(stdout,"\t -e num\t--end \tinput end num,if not used, process *.dat\n");
