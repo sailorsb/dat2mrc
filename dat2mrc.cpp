@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include "mrc.h"
 
 using namespace std;
@@ -20,10 +21,12 @@ using namespace std;
 	char * buf=NULL;
 	const size_t bufsize = 4*1048576;
 	int waittime=120;
+	int type=2;//float
 
 void usage()
 {
-	fprintf(stdout,"convert gatan dat to mrc stack\n");
+	fprintf(stdout,"Convert gatan dat to mrc stack.\n");
+	fprintf(stdout,"Update:20190817 support K3.\n");
 	fprintf(stdout,"Usage: ./dat2mrc \n");
 	fprintf(stdout,"\t -s num\t--start \tinput start num\n");
 	fprintf(stdout,"\t -e num\t--end \tinput end num,if not used, process *.dat\n");
@@ -34,7 +37,10 @@ void usage()
 	fprintf(stdout,"\t [-i name]\t--inputprefix \tinput prefix,default is \"-\"\n");
 	fprintf(stdout,"\t [-p name]\t--prefix \toutput prefix,default is stack\n");
 	fprintf(stdout,"\t [-b num]\t--prefixbegin \toutput prefix begin number,default is 1\n");
+	fprintf(stdout,"\t [-t num]\t--type \tmrc file type. 0--char(1 byte/pixel,-128~127) 2--float(4 byte/pixel) 5--unsigned char(1 byte/pixel,0~255)\n");
 	fprintf(stdout,"\t [-d]\t--delraw \tif use this flag, will delete .dat file when create stack file\n");
+	fprintf(stdout,"\t [-3]\t--k3 \tif use this flag and unset column,row,type,them will be set colum=11520 row=8184 byte=0 .\n");
+	
 	fprintf(stdout,"\t [-h]\t--help \tshow this message\n");
 }
 void mergemrc(int datnum,int prefixnum)
@@ -49,7 +55,18 @@ void mergemrc(int datnum,int prefixnum)
 	header.nx = width;
 	header.ny = height;
 	header.nz = frame;
-	header.mode = 2;
+	header.mode = type;
+	header.map[0]='M';
+	header.map[1]='A';
+	header.map[2]='P';
+	header.map[3]=' ';
+	header.nlabels=1;
+	time_t now;
+	struct tm *timenow;
+	time(&now);
+	timenow = localtime(&now);
+	sprintf(header.label[0],"Create by eTas at %4d-%02d-%02d %02d:%02d:%02d",
+		timenow->tm_year+1900,timenow->tm_mon+1,timenow->tm_mday,timenow->tm_hour,timenow->tm_min,timenow->tm_sec);
 	int realFrame=0;
 	fwrite(&header,sizeof(header),1,fileout);
 	size_t filelen;
@@ -133,7 +150,7 @@ void mergemrc(int datnum,int prefixnum)
 int main(int argc,char* argv[])
 {
 	int opt;
-	static const char *shortopts = "s:e:i:p:c:r:f:b:w:dh";
+	static const char *shortopts = "s:e:i:p:c:r:f:b:w:t:3dh";
 	struct option longopts[] = {
 		{ "start", required_argument, NULL, 's' },
 		{ "end", required_argument, NULL, 'e' },
@@ -144,7 +161,9 @@ int main(int argc,char* argv[])
 		{ "frame", required_argument, NULL, 'f' },
 		{ "wait", required_argument, NULL, 'w' },
 		{ "prefixstart", required_argument, NULL, 'b' },
+		{ "type", required_argument, NULL, 't' },
 		{ "delraw", no_argument, NULL, 'd' },
+		{ "k3", no_argument, NULL, '3' },
 		{ "help", no_argument, NULL, 'h' },
 		//{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	};
@@ -184,8 +203,16 @@ int main(int argc,char* argv[])
 		case 'b':
 			prefixstart = atoi(optarg);
 			break;
+		case 't':
+			type = atoi(optarg);
+			break;
 		case 'd':
 			delraw=true;
+			break;
+		case '3':
+			width = 11520;
+			height = 8184;
+			type = 0;
 			break;
 		case 'h':
 			usage();
